@@ -77,33 +77,33 @@ llm = Ollama(model="gemma3:1b", temperature=0)
 def retrieve_node(state: GraphState):
     embeddings = OllamaEmbeddings(model="nomic-embed-text")
     db = FAISS.load_local(DB_PATH, embeddings, allow_dangerous_deserialization=True)
-    retriever = db.as_retriever(search_kwargs={"k": 3})
+    retriever = db.as_retriever(search_type = "mmr",search_kwargs={"k": 3,"fetch_k":20,"lambda_mult":0.5})
     
     docs = retriever.invoke(state["question"])
     context = "\n\n".join([doc.page_content for doc in docs])
     doc_sources = [doc.page_content for doc in docs]
     
-    return {"context": context, "documents": doc_sources, "trace": [f"🔍 Retrieved context for: '{state['question']}'"]}
+    return {"context": context, "documents": doc_sources, "trace": [f" Retrieved context for: '{state['question']}'"]}
 
 async def eval_context_node(state: GraphState):
     chain = EVAL_CONTEXT_PROMPT | llm | StrOutputParser()
     eval_result = await chain.ainvoke({"question": state["question"], "context": state["context"]})
     
     if "PASS" in eval_result.upper().split('\n')[0]:
-        return {"feedback": "PASS", "trace": ["✅ Context Precision: PASS"]}
+        return {"feedback": "PASS", "trace": [" Context Precision: PASS"]}
     else:
-        return {"feedback": eval_result, "trace": [f"❌ Context Precision: FAIL. Reason: {eval_result.split(maxsplit=1)[-1]}"]}
+        return {"feedback": eval_result, "trace": [f" Context Precision: FAIL. Reason: {eval_result.split(maxsplit=1)[-1]}"]}
 
 async def rewrite_node(state: GraphState):
     chain = REWRITE_PROMPT | llm | StrOutputParser()
     new_query = await chain.ainvoke({"question": state["question"], "feedback": state["feedback"]})
-    return {"question": new_query.strip(), "retries": state["retries"] + 1, "trace": [f"🔄 Rewrote query to: '{new_query.strip()}'"]}
+    return {"question": new_query.strip(), "retries": state["retries"] + 1, "trace": [f" Rewrote query to: '{new_query.strip()}'"]}
 
 async def generate_node(state: GraphState):
     feedback_section = f"PREVIOUS FEEDBACK TO FIX:\n{state['feedback']}" if state["feedback"] and state["feedback"] != "PASS" else ""
     chain = GENERATION_PROMPT | llm | StrOutputParser()
     answer = await chain.ainvoke({"context": state["context"], "question": state["question"], "feedback_section": feedback_section})
-    return {"generation": answer, "trace": [f"✍️ Generated answer attempt {state['retries'] + 1}"]}
+    return {"generation": answer, "trace": [f" Generated answer attempt {state['retries'] + 1}"]}
 
 async def eval_generation_node(state: GraphState):
     util_chain = EVAL_UTILIZATION_PROMPT | llm | StrOutputParser()
@@ -122,13 +122,13 @@ async def eval_generation_node(state: GraphState):
     trace_updates = []
     
     if util_pass and rel_pass:
-        return {"feedback": "PASS", "trace": ["✅ Info Utilization: PASS", "✅ Answer Relevance: PASS"]}
+        return {"feedback": "PASS", "trace": [" Info Utilization: PASS", " Answer Relevance: PASS"]}
     
     if not util_pass:
-        trace_updates.append("❌ Info Utilization: FAIL")
+        trace_updates.append(" Info Utilization: FAIL")
         feedback += f"You missed key details. Include: {util_eval}\n"
     if not rel_pass:
-        trace_updates.append("❌ Answer Relevance: FAIL")
+        trace_updates.append(" Answer Relevance: FAIL")
         feedback += f"Make the answer more direct: {rel_eval}\n"
         
     return {"feedback": feedback, "retries": state["retries"] + 1, "trace": trace_updates}
@@ -212,7 +212,7 @@ async def ask_question(q: Question):
             "documents": [], 
             "generation": "", 
             "feedback": "", 
-            "trace": ["🚀 Graph execution started..."],
+            "trace": [" Graph execution started..."],
             "retries": 0
         }
         
