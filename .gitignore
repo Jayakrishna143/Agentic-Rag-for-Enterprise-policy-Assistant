@@ -1,7 +1,11 @@
+# Block virtual environment system folders
+etc/
 Lib/
 Scripts/
 Include/
-pyvenv.cfg
 share/
+pyvenv.cfg
+# Block API Keys and Caches
+.env
+__pycache__/
 .idea/
-pycache/
