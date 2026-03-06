@@ -9,7 +9,7 @@ from langchain_community.document_loaders import PyPDFLoader
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_community.vectorstores import FAISS
 from langchain_ollama import OllamaEmbeddings
-from langchain_community.llms import Ollama
+from langchain_ollama import OllamaLLM
 from langchain_core.prompts import PromptTemplate
 from langchain_core.output_parsers import StrOutputParser
 from langgraph.graph import END, StateGraph, START
@@ -71,7 +71,7 @@ Answer:
 """)
 
 # --- GLOBAL LLM INIT ---
-llm = Ollama(model="gemma3:1b", temperature=0)
+llm = OllamaLLM(model="gemma3:1b", temperature=0)
 
 # --- GRAPH NODES ---
 def retrieve_node(state: GraphState):
